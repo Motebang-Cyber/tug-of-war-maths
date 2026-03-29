@@ -3,8 +3,8 @@ import axios from "axios";
 // 🔥 AUTO SWITCH BETWEEN LOCAL + PRODUCTION
 const BASE_URL =
   process.env.NODE_ENV === "production"
-    ? "https://tug-of-war-backend-wmde.onrender.com/" 
-    : "http://localhost:5000/api";
+    ? "https://tug-of-war-backend-wmde.onrender.com/api" // ✅ include /api
+    : "http://localhost:5000/api"; // ✅ local dev
 
 const API = axios.create({
   baseURL: BASE_URL,
