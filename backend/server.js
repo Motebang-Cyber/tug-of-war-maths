@@ -9,23 +9,10 @@ const db = require("./config/db");
 
 const app = express();
 
-// ✅ 🔥 ALLOWED ORIGINS (LOCAL + VERCEL)
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "https://tug-of-war-maths.vercel.app/" 
-];
-
 // ================= MIDDLEWARE =================
+// 🔥 TEMPORARY CORS FIX — allow all origins
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // allow non-browser requests
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      return callback(new Error("❌ Not allowed by CORS"));
-    }
-  },
+  origin: "*", // allow any origin
   credentials: true
 }));
 
@@ -118,11 +105,7 @@ app.get("/api/dashboard/leaderboard", (req, res) => {
   query += " ORDER BY points DESC";
 
   db.all(query, params, (err, rows) => {
-    if (err) {
-      console.error("❌ Leaderboard error:", err.message);
-      return res.status(500).json({ message: "Server error" });
-    }
-
+    if (err) return res.status(500).json({ message: "Server error" });
     res.json({ leaderboard: rows });
   });
 });
@@ -136,9 +119,7 @@ app.get("/api/game/question", (req, res) => {
     : "SELECT * FROM questions ORDER BY RANDOM() LIMIT 1";
 
   db.all(query, grade ? [grade] : [], (err, rows) => {
-    if (err || !rows[0]) {
-      return res.status(404).json({ message: "No questions available" });
-    }
+    if (err || !rows[0]) return res.status(404).json({ message: "No questions available" });
     res.json(rows[0]);
   });
 });
@@ -148,7 +129,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: "*", // 🔥 allow all origins for Socket.io
     methods: ["GET", "POST"]
   }
 });
