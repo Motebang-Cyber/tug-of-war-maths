@@ -9,11 +9,26 @@ const db = require("./config/db");
 
 const app = express();
 
+// ✅ 🔥 ALLOWED ORIGINS (LOCAL + VERCEL)
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://tug-of-war-maths.vercel.app/" 
+];
+
 // ================= MIDDLEWARE =================
 app.use(cors({
-  origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true); // allow non-browser requests
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error("❌ Not allowed by CORS"));
+    }
+  },
   credentials: true
 }));
+
 app.use(express.json());
 
 // ================= AUTH =================
@@ -83,7 +98,7 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-// ================= ✅ LEADERBOARD ROUTE =================
+// ================= LEADERBOARD =================
 app.get("/api/dashboard/leaderboard", (req, res) => {
   const { grade } = req.query;
 
@@ -130,9 +145,11 @@ app.get("/api/game/question", (req, res) => {
 
 // ================= SOCKET =================
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    origin: allowedOrigins,
+    methods: ["GET", "POST"]
   }
 });
 
@@ -209,23 +226,16 @@ io.on("connection", (socket) => {
         match.ropePosition += 1;
       }
 
-      // ================= WIN =================
       if (match.streakA >= 5 || match.streakB >= 5) {
         const winnerId = match.streakA >= 5 ? match.playerA : match.playerB;
 
         io.to(matchId).emit("game-over", { winnerId });
 
-        // ✅ UPDATE POINTS
         db.run(
           "UPDATE users SET points = points + 3 WHERE id = ?",
           [winnerId],
           function (err) {
-            if (err) {
-              console.error("❌ DB update error:", err.message);
-            } else {
-              console.log("🏆 Winner:", winnerId);
-
-              // ✅ BROADCAST LEADERBOARD UPDATE
+            if (!err) {
               io.emit("leaderboard-updated");
             }
           }
@@ -253,5 +263,5 @@ io.on("connection", (socket) => {
 // ================= START =================
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
