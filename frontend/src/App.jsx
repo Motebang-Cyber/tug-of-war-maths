@@ -4,17 +4,18 @@ import Register from "./pages/Register";
 import StudentDashboard from "./pages/StudentDashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import Leaderboard from "./pages/Leaderboard";
+import GlobalLeaderboard from "./pages/GlobalLeaderboard";
 import TugOfWarGame from "./pages/TugOfWarGame";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 function App() {
   return (
     <Routes>
-      {/* ✅ Public Routes */}
-      <Route path="/" element={<Login />} />
+      {/* ── Public ── */}
+      <Route path="/"         element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* ✅ Student Routes */}
+      {/* ── Student ── */}
       <Route
         path="/student"
         element={
@@ -24,7 +25,7 @@ function App() {
         }
       />
 
-      {/* ✅ Game Routes */}
+      {/* ── Game (two paths for backward compat) ── */}
       <Route
         path="/game/:matchId"
         element={
@@ -33,8 +34,6 @@ function App() {
           </ProtectedRoute>
         }
       />
-
-      {/* ✅ Backward compatible game route */}
       <Route
         path="/tugOfWarGame"
         element={
@@ -44,7 +43,7 @@ function App() {
         }
       />
 
-      {/* ✅ Teacher Routes */}
+      {/* ── Teacher ── */}
       <Route
         path="/teacher"
         element={
@@ -54,24 +53,44 @@ function App() {
         }
       />
 
-      {/* ✅ Shared Routes */}
-      <Route path="/leaderboard" element={<Leaderboard />} />
+      {/* ── Leaderboards ── */}
+      <Route path="/leaderboard"        element={<Leaderboard />} />
+      <Route path="/global-leaderboard" element={<GlobalLeaderboard />} />
 
-      {/* ✅ 404 Page */}
+      {/* ── 404 ── */}
       <Route
         path="*"
         element={
           <div
-            className="d-flex justify-content-center align-items-center"
-            style={{ minHeight: "100vh", backgroundColor: "#f8f9fa" }}
+            style={{
+              minHeight: "100vh",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "linear-gradient(135deg, #1e3a8a, #7c3aed)",
+              fontFamily: "'Fredoka One', cursive",
+              color: "white",
+              gap: "16px",
+            }}
           >
-            <div className="text-center p-5">
-              <h1 className="display-4">404 - Page Not Found</h1>
-              <p className="lead">Go back to login</p>
-              <a href="/" className="btn btn-primary btn-lg">
-                Login
-              </a>
-            </div>
+            <div style={{ fontSize: "80px" }}>🤔</div>
+            <h1 style={{ fontSize: "48px", margin: 0 }}>404</h1>
+            <p style={{ fontSize: "22px", opacity: 0.8 }}>Oops! Page not found</p>
+            <a
+              href="/"
+              style={{
+                padding: "12px 32px",
+                background: "#fbbf24",
+                color: "#1e293b",
+                borderRadius: "16px",
+                textDecoration: "none",
+                fontSize: "20px",
+                fontWeight: 700,
+              }}
+            >
+              🏠 Go Home
+            </a>
           </div>
         }
       />
