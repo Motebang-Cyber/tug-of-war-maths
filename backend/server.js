@@ -10,12 +10,10 @@ const db = require("./config/db");
 const app = express();
 
 // ================= MIDDLEWARE =================
-// 🔥 TEMPORARY CORS FIX — allow all origins
 app.use(cors({
-  origin: "*", // allow any origin
+  origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
   credentials: true
 }));
-
 app.use(express.json());
 
 // ================= ROUTES =================
@@ -109,7 +107,10 @@ app.get("/api/dashboard/leaderboard", (req, res) => {
   query += " ORDER BY points DESC";
 
   db.all(query, params, (err, rows) => {
-    if (err) return res.status(500).json({ message: "Server error" });
+    if (err) {
+      console.error("❌ Leaderboard error:", err.message);
+      return res.status(500).json({ message: "Server error" });
+    }
     res.json({ leaderboard: rows });
   });
 });
@@ -123,18 +124,18 @@ app.get("/api/game/question", (req, res) => {
     : "SELECT * FROM questions ORDER BY RANDOM() LIMIT 1";
 
   db.all(query, grade ? [grade] : [], (err, rows) => {
-    if (err || !rows[0]) return res.status(404).json({ message: "No questions available" });
+    if (err || !rows[0]) {
+      return res.status(404).json({ message: "No questions available" });
+    }
     res.json(rows[0]);
   });
 });
 
 // ================= SOCKET =================
 const server = http.createServer(app);
-
 const io = new Server(server, {
   cors: {
-    origin: "*", // 🔥 allow all origins for Socket.io
-    methods: ["GET", "POST"]
+    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
   }
 });
 
@@ -207,6 +208,7 @@ io.on("connection", (socket) => {
         match.ropePosition += 1;
       }
 
+      // ── Check for win ──
       if (match.streakA >= 5 || match.streakB >= 5) {
         const winnerId = match.streakA >= 5 ? match.playerA : match.playerB;
 
@@ -216,7 +218,10 @@ io.on("connection", (socket) => {
           "UPDATE users SET points = points + 3 WHERE id = ?",
           [winnerId],
           function (err) {
-            if (!err) {
+            if (err) {
+              console.error("❌ DB update error:", err.message);
+            } else {
+              console.log("🏆 Winner points awarded to user:", winnerId);
               io.emit("leaderboard-updated");
             }
           }
@@ -245,5 +250,5 @@ io.on("connection", (socket) => {
 // ================= START =================
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
