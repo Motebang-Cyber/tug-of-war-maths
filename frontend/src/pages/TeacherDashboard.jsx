@@ -3,6 +3,68 @@ import { useNavigate } from "react-router-dom";
 import API from "../api/api";
 import bgImage from "../assets/login-bg.png";
 
+/* ═══════════════════════════════════════════════════════════
+   CONSTANTS
+═══════════════════════════════════════════════════════════ */
+const GRADES = [1, 2, 3, 4, 5, 6, 7];
+const GRADE_COLORS = {
+  1: "#f87171", 2: "#fb923c", 3: "#fbbf24",
+  4: "#4ade80", 5: "#34d399", 6: "#60a5fa", 7: "#a78bfa",
+};
+
+/* ═══════════════════════════════════════════════════════════
+   SMALL REUSABLE UI PIECES
+═══════════════════════════════════════════════════════════ */
+function GradeBadge({ grade }) {
+  return (
+    <span style={{
+      display: "inline-block",
+      padding: "3px 12px",
+      borderRadius: "50px",
+      background: GRADE_COLORS[grade] || "#e5e7eb",
+      color: "#fff",
+      fontFamily: "'Fredoka One', cursive",
+      fontSize: "13px",
+      fontWeight: 700,
+      textShadow: "0 1px 3px rgba(0,0,0,0.2)",
+    }}>
+      G{grade}
+    </span>
+  );
+}
+
+function SectionHeader({ icon, title, count }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+      <span style={{ fontSize: "28px" }}>{icon}</span>
+      <h2 style={{
+        fontFamily: "'Fredoka One', cursive",
+        fontSize: "24px",
+        color: "#1e293b",
+        margin: 0,
+      }}>
+        {title}
+      </h2>
+      {count !== undefined && (
+        <span style={{
+          background: "#f1f5f9",
+          color: "#64748b",
+          borderRadius: "50px",
+          padding: "2px 12px",
+          fontFamily: "'Nunito', sans-serif",
+          fontWeight: 800,
+          fontSize: "14px",
+        }}>
+          {count}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MAIN COMPONENT
+═══════════════════════════════════════════════════════════ */
 function TeacherDashboard() {
   const navigate = useNavigate();
   
@@ -29,6 +91,7 @@ function TeacherDashboard() {
 
   // ================= FIXED API CALLS - NO /api/ PREFIX ✅ =================
   const fetchStudents = async () => {
+    setStudLoading(true);
     try {
       const res = await API.get("/dashboard/leaderboard");  // ← API.js adds /api
       setStudents(res.data.leaderboard || []);
@@ -62,7 +125,9 @@ function TeacherDashboard() {
       setStudentError("All fields required. Grade 1-7 only.");
       return;
     }
+    if (g < 1 || g > 7) { setStudError("Grade must be 1–7"); return; }
 
+    setStudSaving(true);
     try {
       setAddingStudent(true);
       await API.post("/auth/register", {  // ← API.js adds /api
@@ -80,7 +145,7 @@ function TeacherDashboard() {
     } catch (err) {
       setStudentError(err.response?.data?.message || "Failed to add student");
     } finally {
-      setAddingStudent(false);
+      setStudSaving(false);
     }
   };
 
@@ -118,9 +183,11 @@ function TeacherDashboard() {
     return matchesSearch && matchesGrade;
   });
 
-  const logout = () => {
-    localStorage.clear();
-    navigate("/");
+  /* ═══════════ QUESTION CRUD ═══════════ */
+  const resetQForm = () => {
+    setQForm({ question:"", answer:"", grade_id:"" });
+    setEditQId(null);
+    setQError("");
   };
 
   if (loading) {
@@ -131,6 +198,19 @@ function TeacherDashboard() {
     );
   }
 
+  /* ── Filtered questions ── */
+  const filteredQuestions = questions.filter((q) => {
+    const matchText  = q.question?.toLowerCase().includes(qSearch.toLowerCase());
+    const matchGrade = qGradeFilter ? String(q.grade_id) === qGradeFilter : true;
+    return matchText && matchGrade;
+  });
+
+  /* ═══════════ LOGOUT ═══════════ */
+  const logout = () => { localStorage.clear(); navigate("/"); };
+
+  /* ══════════════════════════════════════════════════════════
+     RENDER
+  ══════════════════════════════════════════════════════════ */
   return (
     <div style={{
       minHeight: "100vh",
@@ -202,6 +282,22 @@ function TeacherDashboard() {
                     </select>
                   </div>
                 </div>
+              </div>
+              <div style={{ display:"flex", gap:"8px", flexWrap:"wrap", marginBottom:"18px" }}>
+                <button
+                  className={`grade-pill ${studGradeFilter === "" ? "active" : ""}`}
+                  onClick={() => setStudGradeFilter("")}
+                >All</button>
+                {GRADES.map((g) => (
+                  <button
+                    key={g}
+                    className={`grade-pill ${studGradeFilter === String(g) ? "active" : ""}`}
+                    onClick={() => setStudGradeFilter(String(g))}
+                  >
+                    Grade {g}
+                  </button>
+                ))}
+              </div>
 
                 <div className="table-responsive" style={{maxHeight: "300px", overflowY: "auto"}}>
                   <table className="table table-hover">
@@ -277,10 +373,56 @@ function TeacherDashboard() {
                   </table>
                 </div>
               </div>
+
+              {qLoading ? (
+                <div className="empty-state"><div>⏳</div><p>Loading questions…</p></div>
+              ) : filteredQuestions.length === 0 ? (
+                <div className="empty-state"><div>📭</div><p>No questions found</p></div>
+              ) : (
+                <div style={{ overflowX:"auto" }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Question</th>
+                        <th>Answer</th>
+                        <th>Grade</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredQuestions.map((q, i) => (
+                        <tr key={q.id} className="data-row">
+                          <td style={{ color:"#94a3b8", fontFamily:"'Fredoka One',cursive" }}>{i + 1}</td>
+                          <td>
+                            <span className="q-cell" title={q.question}>{q.question}</span>
+                          </td>
+                          <td>
+                            <span style={{
+                              background:"#d1fae5", color:"#065f46",
+                              borderRadius:"8px", padding:"3px 10px",
+                              fontFamily:"'Fredoka One',cursive", fontSize:"14px",
+                            }}>
+                              {q.answer}
+                            </span>
+                          </td>
+                          <td><GradeBadge grade={q.grade_id} /></td>
+                          <td>
+                            <div style={{ display:"flex", gap:"6px", justifyContent:"flex-end", flexWrap:"wrap" }}>
+                              <button className="btn-edit" onClick={() => startEditQuestion(q)}>✏️ Edit</button>
+                              <button className="btn-delete" onClick={() => confirmDeleteQuestion(q)}>🗑️ Delete</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

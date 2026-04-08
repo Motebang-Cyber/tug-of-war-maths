@@ -18,6 +18,12 @@ app.use(cors({
 
 app.use(express.json());
 
+// ================= ROUTES =================
+app.use("/api/auth",      require("./routes/auth"));
+app.use("/api/dashboard", require("./routes/dashboard"));
+app.use("/api/questions", require("./routes/questions"));
+app.use("/api/students",  require("./routes/students"));   // ✅ Student CRUD (edit/delete)
+
 // ================= AUTH =================
 app.post("/api/auth/register", async (req, res) => {
   try {
@@ -37,9 +43,8 @@ app.post("/api/auth/register", async (req, res) => {
         `INSERT INTO users (full_name, email, password_hash, role, grade_id, points, created_at)
          VALUES (?, ?, ?, ?, ?, 0, datetime('now'))`,
         [full_name, email, password_hash, role, role === "student" ? grade_id : null],
-        function(err) {
+        function (err) {
           if (err) return res.status(500).json({ message: err.message });
-
           res.status(201).json({
             message: "User registered successfully",
             user_id: this.lastID,
@@ -94,7 +99,6 @@ app.get("/api/dashboard/leaderboard", (req, res) => {
     FROM users
     WHERE role = 'student'
   `;
-
   const params = [];
 
   if (grade) {
@@ -142,21 +146,18 @@ io.on("connection", (socket) => {
 
   socket.on("student-online", (student) => {
     onlineStudents = onlineStudents.filter(s => s.studentId !== student.studentId);
-
     onlineStudents.push({
       socketId: socket.id,
       studentId: student.studentId,
       name: student.name,
       grade: student.grade
     });
-
     io.emit("update-online-students", onlineStudents);
   });
 
   socket.on("send-match-request", ({ to }) => {
-    const from = onlineStudents.find(s => s.socketId === socket.id);
+    const from   = onlineStudents.find(s => s.socketId === socket.id);
     const target = onlineStudents.find(s => s.studentId === to);
-
     if (from && target) {
       io.to(target.socketId).emit("match-request", {
         from: from.studentId,
@@ -182,7 +183,6 @@ io.on("connection", (socket) => {
 
       socket.join(matchId);
       io.sockets.sockets.get(requester.socketId)?.join(matchId);
-
       io.to(matchId).emit("start-game", { matchId });
     }
   });
@@ -227,7 +227,7 @@ io.on("connection", (socket) => {
       }
     } else {
       if (isPlayerA) match.streakA = 0;
-      else match.streakB = 0;
+      else           match.streakB = 0;
     }
 
     io.to(matchId).emit("rope-update", {
@@ -238,6 +238,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     onlineStudents = onlineStudents.filter(s => s.socketId !== socket.id);
     io.emit("update-online-students", onlineStudents);
+    console.log("❌ Disconnected:", socket.id);
   });
 });
 
