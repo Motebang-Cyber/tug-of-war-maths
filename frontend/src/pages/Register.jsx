@@ -315,7 +315,7 @@ function Register() {
               <input
                 type="text"
                 className="funky-input"
-                placeholder="e.g. Sipho Dlamini"
+                placeholder="e.g. Thabang Thabong"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
