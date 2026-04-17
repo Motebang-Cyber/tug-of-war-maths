@@ -1,10 +1,8 @@
-name: CI Pipeline
+name: CI Pipeline (DEV)
 
 on:
   push:
     branches: [ "dev" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
   build:
@@ -14,18 +12,22 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Node.jobs
+    - name: Set up Node
       uses: actions/setup-node@v4
       with:
         node-version: '18'
 
     - name: Install dependencies
-      run: npm install
+      run: |
+        cd frontend
+        npm install
 
     - name: Run tests
-      run: npm test || echo "No tests yet"
-    
+      run: |
+        cd frontend
+        npm test || echo "No tests yet"
+
     - name: Build app
-      run: npm run build || echo "No build step"
-    
-    
+      run: |
+        cd frontend
+        npm run build
