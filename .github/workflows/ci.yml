@@ -1,57 +1,37 @@
-name: CI/CD Pipeline
+name: CD (PROD)
 
 on:
   push:
-    branches:
-      - dev
-  pull_request:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
-  build-test-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout code
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      # 2. Setup Node
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '18'
 
-      # 3. Install dependencies (frontend)
-      - name: Install dependencies
-        run: |
-          cd frontend
-          npm install
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm install
 
-      # 4. Run tests
-      - name: Run tests
-        run: |
-          cd frontend
-          npm test || echo "No tests yet"
+    - name: Build app
+      run: |
+        cd frontend
+        npm run build
 
-      # 5. Build React App (Vite → dist)
-      - name: Build app
-        run: |
-          cd frontend
-          npm run build
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
-      # 6. Configure AWS credentials (ONLY on push to dev)
-      - name: Configure AWS Credentials
-        if: github.ref == 'refs/heads/dev'
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      # 7. Deploy to S3 (ONLY on dev branch)
-      - name: Deploy to S3
-        if: github.ref == 'refs/heads/dev'
-        run: |
-          aws s3 sync frontend/dist s3://math-tug-of-war-app-bucket --delete
+    - name: Deploy to S3 (Production)
+      run: |
+        aws s3 sync frontend/dist s3://math-tug-of-war-app-bucket --delete
